@@ -1,0 +1,18 @@
+# core
+numpy>=1.26
+pandas>=2.1
+
+# data
+yfinance>=0.2
+requests>=2.31
+
+# analysis & metrics
+scipy>=1.11
+
+# plotting
+matplotlib>=3.8
+seaborn>=0.13
+
+# notebooks
+jupyter>=1.0
+ipykernel>=6.29
