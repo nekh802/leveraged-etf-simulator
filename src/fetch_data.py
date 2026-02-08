@@ -1,4 +1,5 @@
 import yfinance as yf
+import pandas as pd
 
 def fetch_prices(ticker: str, period: str = "1y", interval: str = "1d") -> pd.DataFrame:
     """
