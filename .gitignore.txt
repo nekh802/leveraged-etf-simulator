@@ -1,13 +1,13 @@
-#Python
+# Python
 __pycache__/
 *.pyc
 
-#Virtual environment
+# venv
 .venv/
+venv/
 
-#Jupyter
-.ipynb_checkpoints
+# env
+.env
 
-#OS
-.DS_Store
-Thumbs.db
+# Jupyter
+.ipynb_checkpoints/
