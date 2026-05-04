@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import yfinance as yf
 from fetch_data import fetch_prices
 
 st.title("Leveraged ETF Simulator")
@@ -10,6 +11,40 @@ base_date = st.date_input("기준일")
 shares = st.number_input("매수 수량", min_value=1, value=3)
 
 base_ts = pd.to_datetime(base_date).normalize()
+
+def get_usdkrw_rate(base_ts):
+    start = base_ts - pd.Timedelta(days=10)
+    end = base_ts + pd.Timedelta(days=1)
+
+    fx = yf.download(
+        "KRW=X",
+        start=start,
+        end=end,
+        progress=False,
+        auto_adjust=False
+    )
+
+    if fx.empty:
+        return None, None
+
+    fx.index = pd.to_datetime(fx.index).tz_localize(None).normalize()
+
+    fx_close = fx["Close"]
+
+    if isinstance(fx_close, pd.DataFrame):
+        fx_close = fx_close.iloc[:, 0]
+
+    fx_close = fx_close.dropna()
+
+    available = fx_close.index[fx_close.index <= base_ts]
+
+    if len(available) == 0:
+        return None, None
+
+    fx_ts = available[-1]
+    usdkrw = float(fx_close.loc[fx_ts])
+
+    return usdkrw, fx_ts
 
 if st.button("시뮬레이션 실행"):
     prices = fetch_prices(ticker)
@@ -55,6 +90,25 @@ if st.button("시뮬레이션 실행"):
 
     initial_capital = shares * shareprices
 
+    usdkrw, fx_ts = get_usdkrw_rate(base_ts)
+
+    if usdkrw is None:
+        st.warning("기준일 환율 데이터를 가져오지 못했어요.")
+        exchange_text = ""
+    else:
+        shareprices_krw = shareprices * usdkrw
+        initial_capital_krw = initial_capital * usdkrw
+        final_1x_krw = total_1x.iloc[-1] * usdkrw
+        final_2x_krw = total_2x.iloc[-1] * usdkrw
+    
+        exchange_text = f"""
+        **기준 환율일:** {fx_ts.date()}  
+        **USD/KRW 환율:** {usdkrw:,.2f}원  
+    
+        **매수가 원화 환산:** {shareprices_krw:,.0f}원  
+        **투자금 원화 환산:** {initial_capital_krw:,.0f}원  
+        """
+
     total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
     total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
 
@@ -68,10 +122,12 @@ if st.button("시뮬레이션 실행"):
     ### 기본형(1x)
     - 누적 수익률: {final_r_1x:.2%}
     - 최종 자산: {total_1x.iloc[-1]:,.2f}
+    - 최종 자산 원화 환산: {final_1x_krw:,.0f}원
 
     ### 레버리지(2x)
     - 누적 수익률: {final_r_2x:.2%}
     - 최종 자산: {total_2x.iloc[-1]:,.2f}
+    - 최종 자산 원화 환산: {final_2x_krw:,.0f}원
     """)
 
     # ----------------------------
