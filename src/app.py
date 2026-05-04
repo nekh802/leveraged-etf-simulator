@@ -109,26 +109,54 @@ if st.button("시뮬레이션 실행"):
         **투자금 원화 환산:** {initial_capital_krw:,.0f}원  
         """
 
-    total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
-    total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
-
-    st.subheader("결과")
-    st.markdown(f"""
-    **기준일:** {base_ts.date()}  
-    **{ticker} {shares}주 매수**  
-    **매수가:** {shareprices:.2f} USD  
-    **투자금:** {initial_capital:,.2f} USD  
-
-    ### 기본형(1x)
-    - 누적 수익률: {final_r_1x:.2%}
-    - 최종 자산: {total_1x.iloc[-1]:,.2f}
-    - 최종 자산 원화 환산: {final_1x_krw:,.0f}원
-
-    ### 레버리지(2x)
-    - 누적 수익률: {final_r_2x:.2%}
-    - 최종 자산: {total_2x.iloc[-1]:,.2f}
-    - 최종 자산 원화 환산: {final_2x_krw:,.0f}원
-    """)
+        # 총 자산 먼저 계산
+        total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
+        total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
+        
+        # 기준일 USD/KRW 환율 가져오기
+        usdkrw, fx_ts = get_usdkrw_rate(base_ts)
+        
+        if usdkrw is None:
+            st.warning("기준일 환율 데이터를 가져오지 못했어요.")
+            exchange_text = ""
+            final_1x_krw_text = "환율 데이터 없음"
+            final_2x_krw_text = "환율 데이터 없음"
+        else:
+            shareprices_krw = shareprices * usdkrw
+            initial_capital_krw = initial_capital * usdkrw
+            final_1x_krw = total_1x.iloc[-1] * usdkrw
+            final_2x_krw = total_2x.iloc[-1] * usdkrw
+        
+            exchange_text = f"""
+        **기준 환율일:** {fx_ts.date()}  
+        **USD/KRW 환율:** {usdkrw:,.2f}원  
+        
+        **매수가 원화 환산:** {shareprices_krw:,.0f}원  
+        **투자금 원화 환산:** {initial_capital_krw:,.0f}원  
+        """
+        
+            final_1x_krw_text = f"{final_1x_krw:,.0f}원"
+            final_2x_krw_text = f"{final_2x_krw:,.0f}원"
+        
+        st.subheader("결과")
+        st.markdown(f"""
+        **기준일:** {base_ts.date()}  
+        **{ticker} {shares}주 매수**  
+        **매수가:** {shareprices:.2f} USD  
+        **투자금:** {initial_capital:,.2f} USD  
+        
+        {exchange_text}
+        
+        ### 기본형(1x)
+        - 누적 수익률: {final_r_1x:.2%}
+        - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
+        - 최종 자산 원화 환산: {final_1x_krw_text}
+        
+        ### 레버리지(2x)
+        - 누적 수익률: {final_r_2x:.2%}
+        - 최종 자산: {total_2x.iloc[-1]:,.2f} USD
+        - 최종 자산 원화 환산: {final_2x_krw_text}
+        """)
 
     # ----------------------------
     # 1. 기준일 이후 주가 그래프
