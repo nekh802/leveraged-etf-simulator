@@ -63,6 +63,7 @@ if st.button("시뮬레이션 실행"):
     **기준일:** {base_ts.date()}  
     **{ticker} {shares}주 매수**  
     **매수가:** {shareprices:.2f} USD 
+    
     **투자금:** {initial_capital:,.2f} USD  
 
     ### 기본형(1x)
