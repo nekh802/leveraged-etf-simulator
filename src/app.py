@@ -6,18 +6,8 @@ import yfinance as yf
 
 st.title("Leveraged ETF Simulator")
 
-def fetch_prices(ticker: str, period: str = "1y", interval: str = "1d") -> pd.DataFrame:
-    df = yf.download(ticker, period=period, interval=interval, auto_adjust=False, progress=False)
-
-    if df is None or df.empty: 
-        raise ValueError(f"가격 데이터를 못 가져왔어요: {ticker}")
-
-    df.index = pd.to_datetime(df.index)
-    return df
-
-
 ticker = st.text_input("Ticker", "AMD")
-base_date = st.date_input("기준일 0000-00-00 형태로 입력")
+base_date = st.date_input("기준일")
 shares = st.number_input("매수 수량", min_value=1, value=3)
 base_ts = pd.to_datetime(base_date)
 
@@ -28,6 +18,15 @@ if st.button("시뮬레이션 실행"):
     close_ticker = prices['Close']
     returns = close_ticker.pct_change().fillna(0)
     leveraged_2x = 2* returns
+
+    # ✅ 수정 1: 기준일이 거래일 아니면 가장 가까운 이전 거래일로 대체
+    if base_ts not in close_ticker.index:
+        available = close_ticker.index[close_ticker.index <= base_ts]
+        if len(available) == 0:
+            st.error("기준일이 데이터 범위보다 이전입니다. 날짜를 다시 선택해주세요.")
+            st.stop()
+        base_ts = available[-1]
+        st.info(f"선택한 날짜가 거래일이 아니어서 {base_ts.date()}로 조정됐어요.")
 
     shareprices = float(close_ticker.loc[base_ts])
 
@@ -55,11 +54,11 @@ if st.button("시뮬레이션 실행"):
 
              기본형
              - 누적 수익률(기준일 이후): {final_r_1x:.2%}
-             - 최종 자산: {total_1x.iloc[-1, 0]:,.2f}
+             - 최종 자산: {total_1x.iloc[-1]:,.2f}
 
              레버리지(2x)
              - 누적 수익률(기준일 이후): {final_r_2x:.2%}
-             - 최종 자산 {total_2x.iloc[-1, 0]:,.2f}
+             - 최종 자산 {total_2x.iloc[-1]:,.2f}
     """,
     unsafe_allow_html=True)
 
