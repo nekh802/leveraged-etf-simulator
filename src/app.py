@@ -7,7 +7,7 @@ from fetch_data import fetch_prices
 st.title("Leveraged ETF Simulator")
 
 ticker = st.text_input("Ticker", "AMD")
-base_date = st.date_input("기준일(전일 이전으로 세팅해 주세요)")
+base_date = st.date_input("기준일")
 shares = st.number_input("매수 수량", min_value=1, value=3)
 
 base_ts = pd.to_datetime(base_date).normalize()
