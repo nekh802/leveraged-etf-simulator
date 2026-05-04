@@ -150,7 +150,7 @@ if st.button("시뮬레이션 실행"):
     ax1.plot(price_plot.index, price_plot.values, label=f"{ticker} Price")
     ax1.set_title(f"{ticker} Price from {base_ts.date()}")
     ax1.set_xlabel("Date")
-    ax1.set_ylabel("Price")
+    ax1.set_ylabel("Price (USD)")
     ax1.legend()
     st.pyplot(fig1)
 
@@ -182,6 +182,6 @@ if st.button("시뮬레이션 실행"):
     ax3.plot(total_2x.index, total_2x.values, label="2x portfolio value")
     ax3.set_title(f"{ticker} Portfolio Value from {base_ts.date()}")
     ax3.set_xlabel("Date")
-    ax3.set_ylabel("Portfolio Value(USD)")
+    ax3.set_ylabel("Portfolio Value (USD)")
     ax3.legend()
     st.pyplot(fig3)
