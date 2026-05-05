@@ -169,42 +169,45 @@ if st.button("시뮬레이션 실행"):
     st.pyplot(fig1)
 
     # ----------------------------
-    # 2. 누적 수익률 그래프 + 괴리율 점 표시
+    # 2. 누적 수익률 그래프 + 매일 괴리율 점 표시
     # ----------------------------
     st.subheader("2) 누적 수익률 그래프")
     
     cum_r1 = (cum_from_base_1x.loc[base_ts:] - 1) * 100
     cum_r2 = (cum_from_base_2x.loc[base_ts:] - 1) * 100
     
+    # 실제 2x 복리 결과
     actual_2x = cum_from_base_2x.loc[base_ts:]
+    
+    # 단순 2배 기대값
     simple_2x = 1 + 2 * (cum_from_base_1x.loc[base_ts:] - 1)
     
+    # 매일 괴리율
     gap_rate = ((actual_2x - simple_2x) / simple_2x) * 100
     
-    gap_pos = gap_rate > 0
-    gap_neg = gap_rate < 0
+    # 점 크기: 괴리율 절댓값이 클수록 크게
+    gap_abs = gap_rate.abs()
+    max_gap = gap_abs.max()
+    
+    if max_gap == 0 or pd.isna(max_gap):
+        point_size = pd.Series(40, index=gap_rate.index)
+    else:
+        point_size = 40 + 120 * (gap_abs / max_gap)
     
     fig2, ax2 = plt.subplots(figsize=(10, 4))
     
     ax2.plot(cum_r1.index, cum_r1.values, label="1x cumulative return (%)")
     ax2.plot(cum_r2.index, cum_r2.values, label="2x cumulative return (%)")
     
-    # 괴리율 양수 지점: 2x 선 위에 점 표시
-    ax2.scatter(
-        cum_r2.index[gap_pos],
-        cum_r2[gap_pos],
-        marker="^",
-        s=60,
-        label="Actual 2x > Simple 2x"
-    )
-    
-    # 괴리율 음수 지점: 2x 선 위에 점 표시
-    ax2.scatter(
-        cum_r2.index[gap_neg],
-        cum_r2[gap_neg],
-        marker="v",
-        s=60,
-        label="Actual 2x < Simple 2x"
+    # 2x 누적 수익률 선 위에 매일 괴리율 점 표시
+    scatter2 = ax2.scatter(
+        cum_r2.index,
+        cum_r2.values,
+        c=gap_rate.values,
+        s=point_size.values,
+        cmap="coolwarm",
+        alpha=0.8,
+        label="Daily gap rate"
     )
     
     ax2.axhline(0, color="black", linewidth=0.8)
@@ -212,6 +215,9 @@ if st.button("시뮬레이션 실행"):
     ax2.set_xlabel("Date")
     ax2.set_ylabel("Return (%)")
     ax2.legend()
+    
+    cbar2 = fig2.colorbar(scatter2, ax=ax2)
+    cbar2.set_label("Gap Rate (%)")
     
     st.pyplot(fig2)
 
