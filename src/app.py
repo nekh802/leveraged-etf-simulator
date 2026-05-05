@@ -260,39 +260,69 @@ if st.button("시뮬레이션 실행"):
     st.caption("점의 색깔과 크기는 매일 괴리율의 크기를 나타내고, 점 위 숫자는 해당 거래일의 괴리율(%)입니다.")
 
     # ----------------------------
-    # 3. 총 자산 그래프 + 괴리율 점 표시
+    # 3. 총 자산 그래프 + 매일 괴리율 점/텍스트 표시
     # ----------------------------
     st.subheader("3) 총 자산 그래프")
     
-    fig3, ax3 = plt.subplots(figsize=(10, 4))
+    # x축: 거래일만 간격 없이 표시
+    x = range(len(total_1x))
     
-    ax3.plot(total_1x.index, total_1x.values, label="1x portfolio value")
-    ax3.plot(total_2x.index, total_2x.values, label="2x portfolio value")
+    fig3, ax3 = plt.subplots(figsize=(12, 5))
     
-    # 괴리율 양수 지점: 2x 자산 선 위에 점 표시
-    ax3.scatter(
-        total_2x.index[gap_pos],
-        total_2x[gap_pos],
-        marker="^",
-        s=60,
-        label="Actual 2x > Simple 2x"
+    # 기본 총 자산 선
+    ax3.plot(
+        x,
+        total_1x.values,
+        marker="o",
+        label="1x portfolio value"
     )
     
-    # 괴리율 음수 지점: 2x 자산 선 위에 점 표시
+    ax3.plot(
+        x,
+        total_2x.values,
+        marker="o",
+        label="2x portfolio value"
+    )
+    
+    # 2x 총 자산 선 위에 괴리율 점 표시
     ax3.scatter(
-        total_2x.index[gap_neg],
-        total_2x[gap_neg],
-        marker="v",
-        s=60,
-        label="Actual 2x < Simple 2x"
+        x,
+        total_2x.values,
+        c=gap_rate.values,
+        s=point_size.values,
+        cmap="coolwarm",
+        alpha=0.85,
+        edgecolors="black",
+        linewidths=0.5,
+        zorder=3,
+        label="Daily gap rate"
+    )
+    
+    # 점 위에 괴리율 텍스트 표시
+    for xi, yi, gap in zip(x, total_2x.values, gap_rate.values):
+        ax3.annotate(
+            f"{gap:+.2f}%",
+            xy=(xi, yi),
+            xytext=(0, 10),
+            textcoords="offset points",
+            ha="center",
+            fontsize=10,
+            fontweight="bold"
+        )
+    
+    ax3.set_xticks(list(x))
+    ax3.set_xticklabels(
+        [d.strftime("%Y-%m-%d") for d in total_1x.index],
+        rotation=45
     )
     
     ax3.set_title(f"{ticker} Portfolio Value from {base_ts.date()}")
-    ax3.set_xlabel("Date")
+    ax3.set_xlabel("Trading Date")
     ax3.set_ylabel("Portfolio Value (USD)")
     ax3.legend()
     
     st.pyplot(fig3)
+
 
     st.info("""
     괴리율이 0%에 가까우면 : 실제 2x 복리 결과가 단순 2배 기대값과 거의 비슷합니다.  
