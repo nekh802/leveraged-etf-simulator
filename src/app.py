@@ -157,6 +157,9 @@ if st.button("시뮬레이션 실행"):
 
     price_plot = close_ticker.loc[base_ts:]
 
+    if len(price_plot) < 2:
+    st.warning("기준일 이후 데이터가 1개 이하라서 선그래프가 거의 보이지 않을 수 있어요. 더 이전 날짜를 선택하면 그래프가 잘 보입니다.")
+
     x = range(len(price_plot))
     
     fig1, ax1 = plt.subplots(figsize=(10, 4))
