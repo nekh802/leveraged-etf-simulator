@@ -157,13 +157,25 @@ if st.button("시뮬레이션 실행"):
 
     price_plot = close_ticker.loc[base_ts:]
 
-    if len(price_plot) < 2:
-        st.warning("기준일 이후 데이터가 1개 이하라서 선그래프가 거의 보이지 않을 수 있어요. 더 이전 날짜를 선택하면 그래프가 잘 보입니다.")
-
+    x = range(len(price_plot))
+    
     fig1, ax1 = plt.subplots(figsize=(10, 4))
-    ax1.plot(price_plot.index, price_plot.values, label=f"{ticker} Price")
+    
+    ax1.plot(
+        x,
+        price_plot.values,
+        marker="o",
+        label=f"{ticker} Price"
+    )
+    
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(
+        [d.strftime("%Y-%m-%d") for d in price_plot.index],
+        rotation=45
+    )
+    
     ax1.set_title(f"{ticker} Price from {base_ts.date()}")
-    ax1.set_xlabel("Date")
+    ax1.set_xlabel("Trading Date")
     ax1.set_ylabel("Price (USD)")
     ax1.legend()
     st.pyplot(fig1)
@@ -173,6 +185,7 @@ if st.button("시뮬레이션 실행"):
     # ----------------------------
     st.subheader("2) 누적 수익률 그래프")
     
+    # 누적 수익률(%)
     cum_r1 = (cum_from_base_1x.loc[base_ts:] - 1) * 100
     cum_r2 = (cum_from_base_2x.loc[base_ts:] - 1) * 100
     
@@ -182,7 +195,7 @@ if st.button("시뮬레이션 실행"):
     # 단순 2배 기대값
     simple_2x = 1 + 2 * (cum_from_base_1x.loc[base_ts:] - 1)
     
-    # 매일 괴리율
+    # 매일 괴리율(%)
     gap_rate = ((actual_2x - simple_2x) / simple_2x) * 100
     
     # 점 크기: 괴리율 절댓값이 클수록 크게
@@ -190,45 +203,61 @@ if st.button("시뮬레이션 실행"):
     max_gap = gap_abs.max()
     
     if max_gap == 0 or pd.isna(max_gap):
-        point_size = pd.Series(40, index=gap_rate.index)
+        point_size = pd.Series(80, index=gap_rate.index)
     else:
-        point_size = 40 + 120 * (gap_abs / max_gap)
+        point_size = 80 + 220 * (gap_abs / max_gap)
+    
+    # x축: 거래일만 간격 없이 표시
+    x = range(len(cum_r1))
     
     fig2, ax2 = plt.subplots(figsize=(12, 5))
     
-    ax2.plot(cum_r1.index, cum_r1.values, label="1x cumulative return (%)")
-    ax2.plot(cum_r2.index, cum_r2.values, label="2x cumulative return (%)")
+    # 기본 선
+    ax2.plot(x, cum_r1.values, marker="o", label="1x cumulative return (%)")
+    ax2.plot(x, cum_r2.values, marker="o", label="2x cumulative return (%)")
     
-    # 2x 누적 수익률 선 위에 매일 괴리율 점 표시
-    scatter2 = ax2.scatter(
-        cum_r2.index,
+    # 2x 선 위에 괴리율 점 표시
+    ax2.scatter(
+        x,
         cum_r2.values,
         c=gap_rate.values,
         s=point_size.values,
         cmap="coolwarm",
-        alpha=0.8,
+        alpha=0.85,
+        edgecolors="black",
+        linewidths=0.5,
+        zorder=3,
         label="Daily gap rate"
     )
     
     # 점 위에 괴리율 텍스트 표시
-    for x, y, gap in zip(cum_r2.index, cum_r2.values, gap_rate.values):
+    for xi, yi, gap in zip(x, cum_r2.values, gap_rate.values):
         ax2.annotate(
-            f"{gap:.1f}%",
-            xy=(x, y),
-            xytext=(0, 8),
+            f"{gap:+.2f}%",
+            xy=(xi, yi),
+            xytext=(0, 10),
             textcoords="offset points",
             ha="center",
-            fontsize=7
+            fontsize=10,
+            fontweight="bold"
         )
     
     ax2.axhline(0, color="black", linewidth=0.8)
+    
+    ax2.set_xticks(list(x))
+    ax2.set_xticklabels(
+        [d.strftime("%Y-%m-%d") for d in cum_r1.index],
+        rotation=45
+    )
+    
     ax2.set_title(f"{ticker} Cumulative Return from {base_ts.date()}")
-    ax2.set_xlabel("Date")
+    ax2.set_xlabel("Trading Date")
     ax2.set_ylabel("Return (%)")
     ax2.legend()
     
     st.pyplot(fig2)
-
+    
+    st.caption("점의 색깔과 크기는 매일 괴리율의 크기를 나타내고, 점 위 숫자는 해당 거래일의 괴리율(%)입니다.")
 
     # ----------------------------
     # 3. 총 자산 그래프 + 괴리율 점 표시
