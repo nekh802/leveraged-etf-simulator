@@ -102,6 +102,7 @@ if st.button("시뮬레이션 실행"):
         exchange_text = ""
         final_1x_krw_text = "환율 데이터 없음"
         final_2x_krw_text = "환율 데이터 없음"
+        compare_text = "환율 데이터가 없어 비교할 수 없음"
     else:
         shareprices_krw = shareprices * usdkrw
         initial_capital_krw = initial_capital * usdkrw
@@ -118,6 +119,15 @@ if st.button("시뮬레이션 실행"):
     
         final_1x_krw_text = f"{final_1x_krw:,.0f}원"
         final_2x_krw_text = f"{final_2x_krw:,.0f}원"
+    
+        compare_diff = final_1x_krw - final_2x_krw
+    
+        if compare_diff < 0:
+            compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 이익"
+        elif compare_diff > 0:
+            compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 손해"
+        else:
+            compare_text = "기본형과 수익이 동일"
     
     st.subheader("결과")
     st.markdown(f"""
@@ -137,6 +147,7 @@ if st.button("시뮬레이션 실행"):
     - 누적 수익률: {final_r_2x:.2%}
     - 최종 자산: {total_2x.iloc[-1]:,.2f} USD
     - 최종 자산 원화 환산: {final_2x_krw_text}
+    - 기본형과 비교: {compare_text}
     """)
 
     # ----------------------------
@@ -176,9 +187,35 @@ if st.button("시뮬레이션 실행"):
     st.pyplot(fig2)
 
     # ----------------------------
-    # 3. 총 자산 그래프(USD)
+    # 3. 괴리율 그래프
     # ----------------------------
-    st.subheader("3) 총 자산 그래프")
+    st.subheader("3) 괴리율 그래프")
+    
+    actual_2x = cum_from_base_2x.loc[base_ts:]
+    simple_2x = 1 + 2 * (cum_from_base_1x.loc[base_ts:] - 1)
+    
+    gap_rate = ((actual_2x - simple_2x) / simple_2x) * 100
+    
+    fig_gap, ax_gap = plt.subplots(figsize=(10, 4))
+    ax_gap.plot(gap_rate.index, gap_rate.values, marker="o", label="Gap rate (%)")
+    ax_gap.axhline(0, color="black", linewidth=0.8)
+    ax_gap.set_title(f"{ticker} Gap Rate: Actual 2x vs Simple 2x from {base_ts.date()}")
+    ax_gap.set_xlabel("Date")
+    ax_gap.set_ylabel("Gap Rate (%)")
+    ax_gap.legend()
+    
+    st.pyplot(fig_gap)
+
+    st.info("""
+    괴리율이 0%에 가까우면 : 실제 2x 복리 결과가 단순 2배 기대값과 거의 비슷합니다.
+    괴리율이 음수면 : 실제 2x 복리 결과가 단순 2배 기대값보다 낮습니다. -> 변동성 손실 가능성 있습니다.
+    괴리율이 양수면 : 실제 2x 복리 결과가 단순 2배 기대값보다 높습니다. -> 상승 추세가 부드럽게 이어졌을 가능성이 있습니다.
+    """)
+
+    # ----------------------------
+    # 4. 총 자산 그래프(USD)
+    # ----------------------------
+    st.subheader("4) 총 자산 그래프")
 
     fig3, ax3 = plt.subplots(figsize=(10, 4))
     ax3.plot(total_1x.index, total_1x.values, label="1x portfolio value")
