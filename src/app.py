@@ -169,21 +169,50 @@ if st.button("시뮬레이션 실행"):
     st.pyplot(fig1)
 
     # ----------------------------
-    # 2. 누적 수익률 그래프
+    # 2. 누적 수익률 그래프 + 괴리율 점 표시
     # ----------------------------
     st.subheader("2) 누적 수익률 그래프")
-
+    
     cum_r1 = (cum_from_base_1x.loc[base_ts:] - 1) * 100
     cum_r2 = (cum_from_base_2x.loc[base_ts:] - 1) * 100
-
+    
+    actual_2x = cum_from_base_2x.loc[base_ts:]
+    simple_2x = 1 + 2 * (cum_from_base_1x.loc[base_ts:] - 1)
+    
+    gap_rate = ((actual_2x - simple_2x) / simple_2x) * 100
+    
+    gap_pos = gap_rate > 0
+    gap_neg = gap_rate < 0
+    
     fig2, ax2 = plt.subplots(figsize=(10, 4))
+    
     ax2.plot(cum_r1.index, cum_r1.values, label="1x cumulative return (%)")
     ax2.plot(cum_r2.index, cum_r2.values, label="2x cumulative return (%)")
+    
+    # 괴리율 양수 지점: 2x 선 위에 점 표시
+    ax2.scatter(
+        cum_r2.index[gap_pos],
+        cum_r2[gap_pos],
+        marker="^",
+        s=60,
+        label="Actual 2x > Simple 2x"
+    )
+    
+    # 괴리율 음수 지점: 2x 선 위에 점 표시
+    ax2.scatter(
+        cum_r2.index[gap_neg],
+        cum_r2[gap_neg],
+        marker="v",
+        s=60,
+        label="Actual 2x < Simple 2x"
+    )
+    
     ax2.axhline(0, color="black", linewidth=0.8)
     ax2.set_title(f"{ticker} Cumulative Return from {base_ts.date()}")
     ax2.set_xlabel("Date")
     ax2.set_ylabel("Return (%)")
     ax2.legend()
+    
     st.pyplot(fig2)
 
     # ----------------------------
@@ -206,22 +235,44 @@ if st.button("시뮬레이션 실행"):
     
     st.pyplot(fig_gap)
 
-    st.info("""
-    괴리율이 0%에 가까우면 : 실제 2x 복리 결과가 단순 2배 기대값과 거의 비슷합니다.
-    괴리율이 음수면 : 실제 2x 복리 결과가 단순 2배 기대값보다 낮습니다. -> 변동성 손실 가능성 있습니다.
-    괴리율이 양수면 : 실제 2x 복리 결과가 단순 2배 기대값보다 높습니다. -> 상승 추세가 부드럽게 이어졌을 가능성이 있습니다.
-    """)
 
     # ----------------------------
-    # 4. 총 자산 그래프(USD)
+    # 3. 총 자산 그래프 + 괴리율 점 표시
     # ----------------------------
-    st.subheader("4) 총 자산 그래프")
-
+    st.subheader("3) 총 자산 그래프")
+    
     fig3, ax3 = plt.subplots(figsize=(10, 4))
+    
     ax3.plot(total_1x.index, total_1x.values, label="1x portfolio value")
     ax3.plot(total_2x.index, total_2x.values, label="2x portfolio value")
+    
+    # 괴리율 양수 지점: 2x 자산 선 위에 점 표시
+    ax3.scatter(
+        total_2x.index[gap_pos],
+        total_2x[gap_pos],
+        marker="^",
+        s=60,
+        label="Actual 2x > Simple 2x"
+    )
+    
+    # 괴리율 음수 지점: 2x 자산 선 위에 점 표시
+    ax3.scatter(
+        total_2x.index[gap_neg],
+        total_2x[gap_neg],
+        marker="v",
+        s=60,
+        label="Actual 2x < Simple 2x"
+    )
+    
     ax3.set_title(f"{ticker} Portfolio Value from {base_ts.date()}")
     ax3.set_xlabel("Date")
     ax3.set_ylabel("Portfolio Value (USD)")
     ax3.legend()
+    
     st.pyplot(fig3)
+
+    st.info("""
+    괴리율이 0%에 가까우면 : 실제 2x 복리 결과가 단순 2배 기대값과 거의 비슷합니다.  
+    괴리율이 음수면 : 실제 2x 복리 결과가 단순 2배 기대값보다 낮습니다. -> 변동성 손실 가능성 있습니다.  
+    괴리율이 양수면 : 실제 2x 복리 결과가 단순 2배 기대값보다 높습니다. -> 상승 추세가 부드럽게 이어졌을 가능성이 있습니다.  
+    """)
