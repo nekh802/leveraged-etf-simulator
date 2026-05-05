@@ -169,7 +169,7 @@ if st.button("시뮬레이션 실행"):
     st.pyplot(fig1)
 
     # ----------------------------
-    # 2. 누적 수익률 그래프 + 매일 괴리율 점 표시
+    # 2. 누적 수익률 그래프 + 매일 괴리율 점/텍스트 표시
     # ----------------------------
     st.subheader("2) 누적 수익률 그래프")
     
@@ -194,7 +194,7 @@ if st.button("시뮬레이션 실행"):
     else:
         point_size = 40 + 120 * (gap_abs / max_gap)
     
-    fig2, ax2 = plt.subplots(figsize=(10, 4))
+    fig2, ax2 = plt.subplots(figsize=(12, 5))
     
     ax2.plot(cum_r1.index, cum_r1.values, label="1x cumulative return (%)")
     ax2.plot(cum_r2.index, cum_r2.values, label="2x cumulative return (%)")
@@ -210,36 +210,24 @@ if st.button("시뮬레이션 실행"):
         label="Daily gap rate"
     )
     
+    # 점 위에 괴리율 텍스트 표시
+    for x, y, gap in zip(cum_r2.index, cum_r2.values, gap_rate.values):
+        ax2.annotate(
+            f"{gap:.1f}%",
+            xy=(x, y),
+            xytext=(0, 8),
+            textcoords="offset points",
+            ha="center",
+            fontsize=7
+        )
+    
     ax2.axhline(0, color="black", linewidth=0.8)
     ax2.set_title(f"{ticker} Cumulative Return from {base_ts.date()}")
     ax2.set_xlabel("Date")
     ax2.set_ylabel("Return (%)")
     ax2.legend()
     
-    cbar2 = fig2.colorbar(scatter2, ax=ax2)
-    cbar2.set_label("Gap Rate (%)")
-    
     st.pyplot(fig2)
-
-    # ----------------------------
-    # 3. 괴리율 그래프
-    # ----------------------------
-    st.subheader("3) 괴리율 그래프")
-    
-    actual_2x = cum_from_base_2x.loc[base_ts:]
-    simple_2x = 1 + 2 * (cum_from_base_1x.loc[base_ts:] - 1)
-    
-    gap_rate = ((actual_2x - simple_2x) / simple_2x) * 100
-    
-    fig_gap, ax_gap = plt.subplots(figsize=(10, 4))
-    ax_gap.plot(gap_rate.index, gap_rate.values, marker="o", label="Gap rate (%)")
-    ax_gap.axhline(0, color="black", linewidth=0.8)
-    ax_gap.set_title(f"{ticker} Gap Rate: Actual 2x vs Simple 2x from {base_ts.date()}")
-    ax_gap.set_xlabel("Date")
-    ax_gap.set_ylabel("Gap Rate (%)")
-    ax_gap.legend()
-    
-    st.pyplot(fig_gap)
 
 
     # ----------------------------
