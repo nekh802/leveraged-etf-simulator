@@ -143,27 +143,23 @@ if st.button("시뮬레이션 실행"):
     - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
     - 최종 자산 원화 환산: {final_1x_krw_text}
 
-    # ----------------------------
     # 양도소득세 계산
-    # ----------------------------
+    if usdkrw is None:
+        capital_gains_tax = 0
+        after_tax_krw_text = "환율 데이터 없음"
+    else:
+        profit_2x_krw = final_2x_krw - initial_capital_krw
+        taxable_profit = max(profit_2x_krw - 2_500_000, 0)
+        capital_gains_tax = taxable_profit * 0.22
+        after_tax_krw = final_2x_krw - capital_gains_tax
     
-    profit_2x_krw = final_2x_krw - initial_capital_krw
-    
-    # 해외주식 양도세:
-    # 수익금 - 250만원 기본공제 후
-    # 22%(지방세 포함)
-    
-    taxable_profit = max(profit_2x_krw - 2_500_000, 0)
-    
-    capital_gains_tax = taxable_profit * 0.22
-    
-    after_tax_krw = final_2x_krw - capital_gains_tax
-    
+        after_tax_krw_text = f"{after_tax_krw:,.0f}원"
+        
     ### 레버리지(2x)
     - 누적 수익률: {final_r_2x:.2%}
     - 최종 자산: {total_2x.iloc[-1]:,.2f} USD
     - 최종 자산 원화 환산: {final_2x_krw_text}
-    - 양도소득세 공제 후 원화 : {after_tax_krw:,.0f} 원
+    - 양도소득세 공제 후 원화 : after_tax_krw_text} 원
     - 기본형과 비교: {compare_text}
     """)
 
