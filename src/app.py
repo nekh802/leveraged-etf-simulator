@@ -128,6 +128,18 @@ if st.button("시뮬레이션 실행"):
             compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 손해"
         else:
             compare_text = "기본형과 수익이 동일"
+
+    # 양도소득세 계산
+    if usdkrw is None:
+        capital_gains_tax = 0
+        after_tax_krw_text = "환율 데이터 없음"
+    else:
+        profit_2x_krw = final_2x_krw - initial_capital_krw
+        taxable_profit = max(profit_2x_krw - 2_500_000, 0)
+        capital_gains_tax = taxable_profit * 0.22
+        after_tax_krw = final_2x_krw - capital_gains_tax
+    
+        after_tax_krw_text = f"{after_tax_krw:,.0f}원"
     
     st.subheader("결과")
     st.markdown(f"""
@@ -142,18 +154,6 @@ if st.button("시뮬레이션 실행"):
     - 누적 수익률: {final_r_1x:.2%}
     - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
     - 최종 자산 원화 환산: {final_1x_krw_text}
-
-    # 양도소득세 계산
-    if usdkrw is None:
-        capital_gains_tax = 0
-        after_tax_krw_text = "환율 데이터 없음"
-    else:
-        profit_2x_krw = final_2x_krw - initial_capital_krw
-        taxable_profit = max(profit_2x_krw - 2_500_000, 0)
-        capital_gains_tax = taxable_profit * 0.22
-        after_tax_krw = final_2x_krw - capital_gains_tax
-    
-        after_tax_krw_text = f"{after_tax_krw:,.0f}원"
         
     ### 레버리지(2x)
     - 누적 수익률: {final_r_2x:.2%}
