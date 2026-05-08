@@ -159,7 +159,7 @@ if st.button("시뮬레이션 실행"):
     - 누적 수익률: {final_r_2x:.2%}
     - 최종 자산: {total_2x.iloc[-1]:,.2f} USD
     - 최종 자산 원화 환산: {final_2x_krw_text}
-    - 양도소득세 공제 후 원화 : {after_tax_krw_text} 원
+    - 양도소득세 공제 후 원화 : {after_tax_krw_text}
     - 기본형과 비교: {compare_text}
     """)
 
