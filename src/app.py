@@ -143,12 +143,15 @@ if st.button("시뮬레이션 실행"):
     - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
     - 최종 자산 원화 환산: {final_1x_krw_text}
 
+    # ----------------------------
     # 양도소득세 계산
-    # 해외주식 기준:
-    # 수익금 - 250만원 기본공제 후
-    # 22%(지방세 포함) 과세
+    # ----------------------------
     
-    profit_2x_krw = final_2x_krw - initial_invest_krw
+    profit_2x_krw = final_2x_krw - initial_capital_krw
+    
+    # 해외주식 양도세:
+    # 수익금 - 250만원 기본공제 후
+    # 22%(지방세 포함)
     
     taxable_profit = max(profit_2x_krw - 2_500_000, 0)
     
