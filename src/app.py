@@ -149,11 +149,16 @@ if st.button("결과보기"):
 
     st.subheader("결과")
 
+    #구매일
+    purchase_date_text = base_ts.strftime("%Y년 %m월 %d일")
+    purchase_fx_text = f"{usdkrw:,.2f}원"
+
 
     st.markdown(f"""
     ### 기본형(1x)
     - 누적 수익률: {final_r_1x:.2%}
     - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
+    - {purchase_date_text} 기준 환율 : {purchase_fx_text}
     - 최종 자산 원화 환산: {final_1x_krw_text}
     - 양도소득세: {capital_gains_tax_text_1x}
     - 양도소득세 공제 후 원화: {after_tax_krw_text_1x}
@@ -161,6 +166,7 @@ if st.button("결과보기"):
     ### 레버리지(2x)
     - 누적 수익률: {final_r_2x:.2%}
     - 최종 자산: {total_2x.iloc[-1]:,.2f} USD
+    - {purchase_date_text} 기준 환율 : {purchase_fx_text}
     - 최종 자산 원화 환산: {final_2x_krw_text}
     - 양도소득세: {capital_gains_tax_text_2x}
     - 양도소득세 공제 후 원화: {after_tax_krw_text_2x}
