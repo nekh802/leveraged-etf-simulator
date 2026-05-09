@@ -96,6 +96,27 @@ if st.button("시뮬레이션 실행"):
     
     # 기준일 USD/KRW 환율 가져오기
     usdkrw, fx_ts = get_usdkrw_rate(base_ts)
+
+    # 양도소득세 계산
+    if usdkrw is None:
+        capital_gains_tax = 0
+        after_tax_krw_text = "환율 데이터 없음"
+    else:
+        profit_2x_krw = final_2x_krw - initial_capital_krw
+        taxable_profit = max(profit_2x_krw - 2_500_000, 0)
+        capital_gains_tax = taxable_profit * 0.22
+        after_tax_krw = final_2x_krw - capital_gains_tax
+    
+        after_tax_krw_text = f"{after_tax_krw:,.0f}원"
+    
+    st.subheader("결과")
+    st.markdown(f"""
+    **기준일:** {base_ts.date()}  
+    **{ticker} {shares}주 매수**  
+    **매수가:** {shareprices:.2f} USD  
+    **투자금:** {initial_capital:,.2f} USD  
+    
+    {exchange_text}
     
     if usdkrw is None:
         st.warning("기준일 환율 데이터를 가져오지 못했어요.")
@@ -129,26 +150,7 @@ if st.button("시뮬레이션 실행"):
         else:
             compare_text = "기본형과 수익이 동일"
 
-    # 양도소득세 계산
-    if usdkrw is None:
-        capital_gains_tax = 0
-        after_tax_krw_text = "환율 데이터 없음"
-    else:
-        profit_2x_krw = final_2x_krw - initial_capital_krw
-        taxable_profit = max(profit_2x_krw - 2_500_000, 0)
-        capital_gains_tax = taxable_profit * 0.22
-        after_tax_krw = final_2x_krw - capital_gains_tax
-    
-        after_tax_krw_text = f"{after_tax_krw:,.0f}원"
-    
-    st.subheader("결과")
-    st.markdown(f"""
-    **기준일:** {base_ts.date()}  
-    **{ticker} {shares}주 매수**  
-    **매수가:** {shareprices:.2f} USD  
-    **투자금:** {initial_capital:,.2f} USD  
-    
-    {exchange_text}
+
     
     ### 기본형(1x)
     - 누적 수익률: {final_r_1x:.2%}
