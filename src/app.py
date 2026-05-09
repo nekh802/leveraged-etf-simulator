@@ -151,7 +151,16 @@ def get_usdkrw_rate(base_ts):
         compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 손해"
     else:
         compare_text = "기본형과 수익이 동일"
-
+        
+    ticker = st.text_input("Ticker", "AMD")
+    base_date = st.date_input("기준일")
+    shares = st.number_input("매수 수량", min_value=1, value=3)
+    
+    base_ts = pd.to_datetime(base_date).normalize()
+    
+    if st.button("결과보기"):
+        prices = fetch_prices(ticker)
+        
     # ----------------------------
     # 결과 출력
     # ----------------------------
