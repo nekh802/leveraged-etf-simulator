@@ -110,47 +110,60 @@ if st.button("결과보기"):
         final_2x_krw = total_2x.iloc[-1] * usdkrw
 
         exchange_text = f"""
-**기준 환율일:** {fx_ts.date()}  
-**USD/KRW 환율:** {usdkrw:,.2f}원  
+        **기준 환율일:** {fx_ts.date()}  
+        **USD/KRW 환율:** {usdkrw:,.2f}원  
+        
+        **매수가 원화 환산:** {shareprices_krw:,.0f}원  
+        **투자금 원화 환산:** {initial_capital_krw:,.0f}원  
+        """
 
-**매수가 원화 환산:** {shareprices_krw:,.0f}원  
-**투자금 원화 환산:** {initial_capital_krw:,.0f}원  
-"""
-
-        final_1x_krw_text = f"{final_1x_krw:,.0f}원"
-        final_2x_krw_text = f"{final_2x_krw:,.0f}원"
-
-        profit_2x_krw = final_2x_krw - initial_capital_krw
-        taxable_profit = max(profit_2x_krw - 2_500_000, 0)
-        capital_gains_tax = taxable_profit * 0.22
-        after_tax_krw = final_2x_krw - capital_gains_tax
-
-        capital_gains_tax_text = f"{capital_gains_tax:,.0f}원"
-        after_tax_krw_text = f"{after_tax_krw:,.0f}원"
-
-        compare_diff = after_tax_krw - final_1x_krw
-
-        if compare_diff > 0:
-            compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 이익"
-        elif compare_diff < 0:
-            compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 손해"
-        else:
-            compare_text = "기본형과 수익이 동일"
+    final_1x_krw_text = f"{final_1x_krw:,.0f}원"
+    final_2x_krw_text = f"{final_2x_krw:,.0f}원"
+    
+    # 1x 양도소득세
+    profit_1x_krw = final_1x_krw - initial_capital_krw
+    taxable_profit_1x = max(profit_1x_krw - 2_500_000, 0)
+    capital_gains_tax_1x = taxable_profit_1x * 0.22
+    after_tax_krw_1x = final_1x_krw - capital_gains_tax_1x
+    
+    # 2x 양도소득세
+    profit_2x_krw = final_2x_krw - initial_capital_krw
+    taxable_profit_2x = max(profit_2x_krw - 2_500_000, 0)
+    capital_gains_tax_2x = taxable_profit_2x * 0.22
+    after_tax_krw_2x = final_2x_krw - capital_gains_tax_2x
+    
+    capital_gains_tax_text_1x = f"{capital_gains_tax_1x:,.0f}원"
+    capital_gains_tax_text_2x = f"{capital_gains_tax_2x:,.0f}원"
+    
+    after_tax_krw_text_1x = f"{after_tax_krw_1x:,.0f}원"
+    after_tax_krw_text_2x = f"{after_tax_krw_2x:,.0f}원"
+    
+    compare_diff = after_tax_krw_2x - after_tax_krw_1x
+    
+    if compare_diff > 0:
+        compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 이익"
+    elif compare_diff < 0:
+        compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 손해"
+    else:
+        compare_text = "기본형과 수익이 동일"
 
     st.subheader("결과")
+
 
     st.markdown(f"""
     ### 기본형(1x)
     - 누적 수익률: {final_r_1x:.2%}
     - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
     - 최종 자산 원화 환산: {final_1x_krw_text}
+    - 양도소득세: {capital_gains_tax_text_1x}
+    - 양도소득세 공제 후 원화: {after_tax_krw_text_1x}
     
     ### 레버리지(2x)
     - 누적 수익률: {final_r_2x:.2%}
     - 최종 자산: {total_2x.iloc[-1]:,.2f} USD
     - 최종 자산 원화 환산: {final_2x_krw_text}
-    - 양도소득세: {capital_gains_tax_text}
-    - 양도소득세 공제 후 원화: {after_tax_krw_text}
+    - 양도소득세: {capital_gains_tax_text_2x}
+    - 양도소득세 공제 후 원화: {after_tax_krw_text_2x}
     - 기본형과 세금 공제 후 비교: {compare_text}
     """)
 
