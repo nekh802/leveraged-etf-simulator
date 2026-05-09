@@ -151,7 +151,7 @@ if st.button("결과보기"):
     - 최종 자산 원화 환산: {final_2x_krw_text}
     - 양도소득세: {capital_gains_tax_text}
     - 양도소득세 공제 후 원화: {after_tax_krw_text}
-    - 기본형과 비교: {compare_text}
+    - 기본형과 세금 공제 후 비교: {compare_text}
     """)
 
     st.info("""
