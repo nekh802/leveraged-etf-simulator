@@ -12,6 +12,7 @@ shares = st.number_input("매수 수량", min_value=1, value=3)
 
 base_ts = pd.to_datetime(base_date).normalize()
 
+
 def get_usdkrw_rate(base_ts):
     start = base_ts - pd.Timedelta(days=10)
     end = base_ts + pd.Timedelta(days=1)
@@ -28,14 +29,12 @@ def get_usdkrw_rate(base_ts):
         return None, None
 
     fx.index = pd.to_datetime(fx.index).tz_localize(None).normalize()
-
     fx_close = fx["Close"]
 
     if isinstance(fx_close, pd.DataFrame):
         fx_close = fx_close.iloc[:, 0]
 
     fx_close = fx_close.dropna()
-
     available = fx_close.index[fx_close.index <= base_ts]
 
     if len(available) == 0:
@@ -46,133 +45,121 @@ def get_usdkrw_rate(base_ts):
 
     return usdkrw, fx_ts
 
-    if st.button("시뮬레이션 실행"):
-        prices = fetch_prices(ticker)
-    
-        # 인덱스 날짜 정리
-        prices.index = pd.to_datetime(prices.index).tz_localize(None).normalize()
-    
-        close_ticker = prices["Close"]
-    
-        # Close가 DataFrame일 경우 대비
-        if isinstance(close_ticker, pd.DataFrame):
-            if ticker in close_ticker.columns:
-                close_ticker = close_ticker[ticker]
-            else:
-                close_ticker = close_ticker.iloc[:, 0]
-    
-        close_ticker = close_ticker.dropna()
-    
-        # 기준일이 거래일이 아니면 가장 가까운 이전 거래일 선택
-        if base_ts not in close_ticker.index:
-            available = close_ticker.index[close_ticker.index <= base_ts]
-            if len(available) == 0:
-                st.error("기준일이 데이터 범위보다 이전입니다. 날짜를 다시 선택해주세요.")
-                st.stop()
-            base_ts = available[-1]
-            st.info(f"선택한 날짜가 거래일이 아니어서 {base_ts.date()}로 조정됐어요.")
-    
-        shareprices = float(close_ticker.loc[base_ts])
-    
-        returns = close_ticker.pct_change().fillna(0)
-        leveraged_2x = 2 * returns
-    
-        # 누적 성과
-        cum_1x = (1 + returns).cumprod()
-        cum_2x = (1 + leveraged_2x).cumprod()
-    
-        # 기준일을 1로 리베이스
-        cum_from_base_1x = cum_1x / cum_1x.loc[base_ts]
-        cum_from_base_2x = cum_2x / cum_2x.loc[base_ts]
-    
-        final_r_1x = float(cum_from_base_1x.loc[base_ts:].iloc[-1] - 1)
-        final_r_2x = float(cum_from_base_2x.loc[base_ts:].iloc[-1] - 1)
-    
-        initial_capital = shares * shareprices
-        
-        # 총 자산 먼저 계산
-        total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
-        total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
-        
-        usdkrw, fx_ts = get_usdkrw_rate(base_ts)
-    
+
+if st.button("결과보기"):
+    prices = fetch_prices(ticker)
+
+    prices.index = pd.to_datetime(prices.index).tz_localize(None).normalize()
+
+    close_ticker = prices["Close"]
+
+    if isinstance(close_ticker, pd.DataFrame):
+        if ticker in close_ticker.columns:
+            close_ticker = close_ticker[ticker]
+        else:
+            close_ticker = close_ticker.iloc[:, 0]
+
+    close_ticker = close_ticker.dropna()
+
+    if base_ts not in close_ticker.index:
+        available = close_ticker.index[close_ticker.index <= base_ts]
+
+        if len(available) == 0:
+            st.error("기준일이 데이터 범위보다 이전입니다. 날짜를 다시 선택해주세요.")
+            st.stop()
+
+        base_ts = available[-1]
+        st.info(f"선택한 날짜가 거래일이 아니어서 {base_ts.date()}로 조정됐어요.")
+
+    shareprices = float(close_ticker.loc[base_ts])
+
+    returns = close_ticker.pct_change().fillna(0)
+    leveraged_2x = 2 * returns
+
+    cum_1x = (1 + returns).cumprod()
+    cum_2x = (1 + leveraged_2x).cumprod()
+
+    cum_from_base_1x = cum_1x / cum_1x.loc[base_ts]
+    cum_from_base_2x = cum_2x / cum_2x.loc[base_ts]
+
+    final_r_1x = float(cum_from_base_1x.loc[base_ts:].iloc[-1] - 1)
+    final_r_2x = float(cum_from_base_2x.loc[base_ts:].iloc[-1] - 1)
+
+    initial_capital = shares * shareprices
+
+    total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
+    total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
+
+    usdkrw, fx_ts = get_usdkrw_rate(base_ts)
+
     if usdkrw is None:
         st.warning("기준일 환율 데이터를 가져오지 못했어요.")
-    
+
         exchange_text = ""
         final_1x_krw_text = "환율 데이터 없음"
         final_2x_krw_text = "환율 데이터 없음"
-    
         capital_gains_tax_text = "환율 데이터 없음"
         after_tax_krw_text = "환율 데이터 없음"
-    
         compare_text = "환율 데이터가 없어 비교할 수 없음"
-    
+
     else:
-        # 원화 환산
         shareprices_krw = shareprices * usdkrw
         initial_capital_krw = initial_capital * usdkrw
-    
+
         final_1x_krw = total_1x.iloc[-1] * usdkrw
         final_2x_krw = total_2x.iloc[-1] * usdkrw
-    
-        # 표시용 텍스트
+
         exchange_text = f"""
-    **기준 환율일:** {fx_ts.date()}  
-    **USD/KRW 환율:** {usdkrw:,.2f}원  
-    
-    **매수가 원화 환산:** {shareprices_krw:,.0f}원  
-    **투자금 원화 환산:** {initial_capital_krw:,.0f}원  
-    """
+**기준 환율일:** {fx_ts.date()}  
+**USD/KRW 환율:** {usdkrw:,.2f}원  
 
-    final_1x_krw_text = f"{final_1x_krw:,.0f}원"
-    final_2x_krw_text = f"{final_2x_krw:,.0f}원"
+**매수가 원화 환산:** {shareprices_krw:,.0f}원  
+**투자금 원화 환산:** {initial_capital_krw:,.0f}원  
+"""
 
-    # ----------------------------
-    # 양도소득세 계산
-    # ----------------------------
-    profit_2x_krw = final_2x_krw - initial_capital_krw
+        final_1x_krw_text = f"{final_1x_krw:,.0f}원"
+        final_2x_krw_text = f"{final_2x_krw:,.0f}원"
 
-    taxable_profit = max(profit_2x_krw - 2_500_000, 0)
+        profit_2x_krw = final_2x_krw - initial_capital_krw
+        taxable_profit = max(profit_2x_krw - 2_500_000, 0)
+        capital_gains_tax = taxable_profit * 0.22
+        after_tax_krw = final_2x_krw - capital_gains_tax
 
-    capital_gains_tax = taxable_profit * 0.22
+        capital_gains_tax_text = f"{capital_gains_tax:,.0f}원"
+        after_tax_krw_text = f"{after_tax_krw:,.0f}원"
 
-    after_tax_krw = final_2x_krw - capital_gains_tax
+        compare_diff = after_tax_krw - final_1x_krw
 
-    capital_gains_tax_text = f"{capital_gains_tax:,.0f}원"
-    after_tax_krw_text = f"{after_tax_krw:,.0f}원"
+        if compare_diff > 0:
+            compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 이익"
+        elif compare_diff < 0:
+            compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 손해"
+        else:
+            compare_text = "기본형과 수익이 동일"
 
-    # 세후 기준 비교
-    compare_diff = after_tax_krw - final_1x_krw
-
-    if compare_diff > 0:
-        compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 이익"
-    elif compare_diff < 0:
-        compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 손해"
-    else:
-        compare_text = "기본형과 수익이 동일"
-        
-    ticker = st.text_input("Ticker", "AMD")
-    base_date = st.date_input("기준일")
-    shares = st.number_input("매수 수량", min_value=1, value=3)
-    
-    base_ts = pd.to_datetime(base_date).normalize()
-    
-    if st.button("결과보기"):
-        prices = fetch_prices(ticker)
-        
-    # ----------------------------
-    # 결과 출력
-    # ----------------------------
     st.subheader("결과")
-    
+
     st.markdown(f"""
-    **기준일:** {base_ts.date()}  
-    **{ticker} {shares}주 매수**  
-    **매수가:** {shareprices:.2f} USD  
-    **투자금:** {initial_capital:,.2f} USD  
-    
-    {exchange_text}
+**기준일:** {base_ts.date()}  
+**{ticker} {shares}주 매수**  
+**매수가:** {shareprices:.2f} USD  
+**투자금:** {initial_capital:,.2f} USD  
+
+{exchange_text}
+
+### 기본형(1x)
+- 누적 수익률: {final_r_1x:.2%}
+- 최종 자산: {total_1x.iloc[-1]:,.2f} USD
+- 최종 자산 원화 환산: {final_1x_krw_text}
+
+### 레버리지(2x)
+- 누적 수익률: {final_r_2x:.2%}
+- 최종 자산: {total_2x.iloc[-1]:,.2f} USD
+- 최종 자산 원화 환산: {final_2x_krw_text}
+- 양도소득세: {capital_gains_tax_text}
+- 양도소득세 공제 후 원화: {after_tax_krw_text}
+- 기본형과 비교: {compare_text}
+""")
     
     ### 기본형(1x)
     - 누적 수익률: {final_r_1x:.2%}
