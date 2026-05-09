@@ -120,7 +120,7 @@ if st.button("시뮬레이션 실행"):
         final_1x_krw_text = f"{final_1x_krw:,.0f}원"
         final_2x_krw_text = f"{final_2x_krw:,.0f}원"
     
-        compare_diff = final_1x_krw - final_2x_krw
+        compare_diff = final_1x_krw - after_tax_krw_text
     
         if compare_diff < 0:
             compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 이익"
