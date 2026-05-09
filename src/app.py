@@ -140,27 +140,6 @@ if st.button("결과보기"):
     st.subheader("결과")
 
     st.markdown(f"""
-**기준일:** {base_ts.date()}  
-**{ticker} {shares}주 매수**  
-**매수가:** {shareprices:.2f} USD  
-**투자금:** {initial_capital:,.2f} USD  
-
-{exchange_text}
-
-### 기본형(1x)
-- 누적 수익률: {final_r_1x:.2%}
-- 최종 자산: {total_1x.iloc[-1]:,.2f} USD
-- 최종 자산 원화 환산: {final_1x_krw_text}
-
-### 레버리지(2x)
-- 누적 수익률: {final_r_2x:.2%}
-- 최종 자산: {total_2x.iloc[-1]:,.2f} USD
-- 최종 자산 원화 환산: {final_2x_krw_text}
-- 양도소득세: {capital_gains_tax_text}
-- 양도소득세 공제 후 원화: {after_tax_krw_text}
-- 기본형과 비교: {compare_text}
-""")
-    
     ### 기본형(1x)
     - 누적 수익률: {final_r_1x:.2%}
     - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
@@ -176,7 +155,7 @@ if st.button("결과보기"):
     """)
 
     st.info("""
-    양도소득세 공제 후 원화 = 최종 자산 - 수익금의 250만 원 기본 공제 - 양도소득세 22% 부과
+    양도소득세는 수익금에서 250만 원 기본공제를 뺀 뒤, 남은 과세 대상 수익에 22%를 적용해 계산했습니다.
     """)
 
     # ----------------------------
