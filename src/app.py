@@ -94,7 +94,8 @@ if st.button("결과보기"):
     final_r_1x = float(cum_from_base_1x.loc[base_ts:].iloc[-1] - 1)
     final_r_2x = float(cum_from_base_2x.loc[base_ts:].iloc[-1] - 1)
 
-    initial_capital = shares * shareprice_1x
+    initial_capital_1x = shares * shareprice_1x
+    initial_capital_2x = shares * shareprice_2x
 
     total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
     total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
