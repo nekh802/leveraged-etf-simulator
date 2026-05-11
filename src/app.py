@@ -6,7 +6,8 @@ from fetch_data import fetch_prices
 
 st.title("Leveraged ETF Simulator")
 
-ticker = st.text_input("Ticker", "AMD")
+ticker_1x = st.text_input("Ticker 1 - 기본형 주식", "AMD")
+ticker_2x = st.text_input("Ticker 2 - 레버리지 ETF", "AMDL")
 base_date = st.date_input("기준일")
 shares = st.number_input("매수 수량", min_value=1, value=3)
 
@@ -47,19 +48,23 @@ def get_usdkrw_rate(base_ts):
 
 
 if st.button("결과보기"):
-    prices = fetch_prices(ticker)
+    prices_1x = fetch_prices(ticker_1x)
+    prices_2x = fetch_prices(ticker_2x)
 
-    prices.index = pd.to_datetime(prices.index).tz_localize(None).normalize()
+    prices_1x.index = pd.to_datetime(prices_1x.index).tz_localize(None).normalize()
+    prices_2x.index = pd.to_datetime(prices_2x.index).tz_localize(None).normalize()
 
-    close_ticker = prices["Close"]
+    close_1x = prices_1x["Close"]
+    close_2x = prices_2x["Close"]
 
-    if isinstance(close_ticker, pd.DataFrame):
-        if ticker in close_ticker.columns:
-            close_ticker = close_ticker[ticker]
-        else:
-            close_ticker = close_ticker.iloc[:, 0]
-
-    close_ticker = close_ticker.dropna()
+    if isinstance(close_1x, pd.DataFrame):
+        close_1x = close_1x.iloc[:, 0]
+    
+    if isinstance(close_2x, pd.DataFrame):
+        close_2x = close_2x.iloc[:, 0]
+    
+    close_1x = close_1x.dropna()
+    close_2x = close_2x.dropna()
 
     if base_ts not in close_ticker.index:
         available = close_ticker.index[close_ticker.index <= base_ts]
@@ -73,8 +78,11 @@ if st.button("결과보기"):
 
     shareprices = float(close_ticker.loc[base_ts])
 
-    returns = close_ticker.pct_change().fillna(0)
-    leveraged_2x = 2 * returns
+    returns_1x = close_1x.pct_change().fillna(0)
+    returns_2x = close_2x.pct_change().fillna(0)
+    
+    cum_1x = (1 + returns_1x).cumprod()
+    cum_2x = (1 + returns_2x).cumprod()
 
     cum_1x = (1 + returns).cumprod()
     cum_2x = (1 + leveraged_2x).cumprod()
@@ -85,11 +93,14 @@ if st.button("결과보기"):
     final_r_1x = float(cum_from_base_1x.loc[base_ts:].iloc[-1] - 1)
     final_r_2x = float(cum_from_base_2x.loc[base_ts:].iloc[-1] - 1)
 
-    initial_capital = shares * shareprices
-
+    shareprice_1x = float(close_1x.loc[base_ts])
+    shareprice_2x = float(close_2x.loc[base_ts])
+    
+    initial_capital = shares * shareprice_1x
+    
     total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
     total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
-
+    
     usdkrw, fx_ts = get_usdkrw_rate(base_ts)
 
     if usdkrw is None:
