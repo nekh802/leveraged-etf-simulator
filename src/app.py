@@ -9,7 +9,8 @@ st.title("Leveraged ETF Simulator")
 ticker_1x = st.text_input("Ticker 1 - 기본형 주식", "AMD")
 ticker_2x = st.text_input("Ticker 2 - 레버리지 ETF", "AMDL")
 base_date = st.date_input("기준일")
-shares = st.number_input("매수 수량", min_value=1, value=3)
+shares_1x = st.number_input("기본형 주식 매수 수량", min_value=1, value=300)
+shares_2x = st.number_input("레버리지 ETF 매수 수량", min_value=1, value=300)
 
 base_ts = pd.to_datetime(base_date).normalize()
 
@@ -98,8 +99,8 @@ if st.button("결과보기"):
     final_r_1x = float(cum_from_base_1x.loc[base_ts:].iloc[-1] - 1)
     final_r_2x = float(cum_from_base_2x.loc[base_ts:].iloc[-1] - 1)
 
-    initial_capital_1x = shares * shareprice_1x
-    initial_capital_2x = shares * shareprice_2x
+    initial_capital_1x = shares_1x * shareprice_1x
+    initial_capital_2x = shares_2x * shareprice_2x
 
     total_1x = (cum_from_base_1x * initial_capital_1x).loc[base_ts:]
     total_2x = (cum_from_base_2x * initial_capital_2x).loc[base_ts:]
@@ -145,7 +146,7 @@ if st.button("결과보기"):
     st.markdown(f"""
     ### 기본형(1x) - {ticker_1x}
     - 매수가: {shareprice_1x:,.2f} USD
-    - 매수 수량: {shares:,}주
+    - 매수 수량: {shares_1x:,}주
     - 최초 투자금: {initial_capital_1x:,.2f} USD
     - 최초 투자금 원화 환산: {initial_capital_1x_krw:,.0f}원
     - 누적 수익률: {final_r_1x:.2%}
@@ -158,7 +159,7 @@ if st.button("결과보기"):
 
     ### 레버리지 ETF - {ticker_2x}
     - 매수가: {shareprice_2x:,.2f} USD
-    - 매수 수량: {shares:,}주
+    - 매수 수량: {shares_2x:,}주
     - 최초 투자금: {initial_capital_2x:,.2f} USD
     - 최초 투자금 원화 환산: {initial_capital_2x_krw:,.0f}원
     - 누적 수익률: {final_r_2x:.2%}
