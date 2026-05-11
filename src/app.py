@@ -47,27 +47,30 @@ def get_usdkrw_rate(base_ts):
     return usdkrw, fx_ts
 
 
+def get_close_series(prices):
+    prices.index = pd.to_datetime(prices.index).tz_localize(None).normalize()
+    close = prices["Close"]
+
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+
+    return close.dropna()
+
+
 if st.button("결과보기"):
     prices_1x = fetch_prices(ticker_1x)
     prices_2x = fetch_prices(ticker_2x)
 
-    prices_1x.index = pd.to_datetime(prices_1x.index).tz_localize(None).normalize()
-    prices_2x.index = pd.to_datetime(prices_2x.index).tz_localize(None).normalize()
+    close_1x = get_close_series(prices_1x)
+    close_2x = get_close_series(prices_2x)
 
-    close_1x = prices_1x["Close"]
-    close_2x = prices_2x["Close"]
+    common_dates = close_1x.index.intersection(close_2x.index)
 
-    if isinstance(close_1x, pd.DataFrame):
-        close_1x = close_1x.iloc[:, 0]
-    
-    if isinstance(close_2x, pd.DataFrame):
-        close_2x = close_2x.iloc[:, 0]
-    
-    close_1x = close_1x.dropna()
-    close_2x = close_2x.dropna()
+    close_1x = close_1x.loc[common_dates]
+    close_2x = close_2x.loc[common_dates]
 
-    if base_ts not in close_ticker.index:
-        available = close_ticker.index[close_ticker.index <= base_ts]
+    if base_ts not in common_dates:
+        available = common_dates[common_dates <= base_ts]
 
         if len(available) == 0:
             st.error("기준일이 데이터 범위보다 이전입니다. 날짜를 다시 선택해주세요.")
@@ -76,16 +79,14 @@ if st.button("결과보기"):
         base_ts = available[-1]
         st.info(f"선택한 날짜가 거래일이 아니어서 {base_ts.date()}로 조정됐어요.")
 
-    shareprices = float(close_ticker.loc[base_ts])
+    shareprice_1x = float(close_1x.loc[base_ts])
+    shareprice_2x = float(close_2x.loc[base_ts])
 
     returns_1x = close_1x.pct_change().fillna(0)
     returns_2x = close_2x.pct_change().fillna(0)
-    
+
     cum_1x = (1 + returns_1x).cumprod()
     cum_2x = (1 + returns_2x).cumprod()
-
-    cum_1x = (1 + returns).cumprod()
-    cum_2x = (1 + leveraged_2x).cumprod()
 
     cum_from_base_1x = cum_1x / cum_1x.loc[base_ts]
     cum_from_base_2x = cum_2x / cum_2x.loc[base_ts]
@@ -93,64 +94,34 @@ if st.button("결과보기"):
     final_r_1x = float(cum_from_base_1x.loc[base_ts:].iloc[-1] - 1)
     final_r_2x = float(cum_from_base_2x.loc[base_ts:].iloc[-1] - 1)
 
-    shareprice_1x = float(close_1x.loc[base_ts])
-    shareprice_2x = float(close_2x.loc[base_ts])
-    
     initial_capital = shares * shareprice_1x
-    
+
     total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
     total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
-    
+
     usdkrw, fx_ts = get_usdkrw_rate(base_ts)
 
     if usdkrw is None:
         st.warning("기준일 환율 데이터를 가져오지 못했어요.")
+        st.stop()
 
-        exchange_text = ""
-        final_1x_krw_text = "환율 데이터 없음"
-        final_2x_krw_text = "환율 데이터 없음"
-        capital_gains_tax_text = "환율 데이터 없음"
-        after_tax_krw_text = "환율 데이터 없음"
-        compare_text = "환율 데이터가 없어 비교할 수 없음"
+    initial_capital_krw = initial_capital * usdkrw
 
-    else:
-        shareprices_krw = shareprices * usdkrw
-        initial_capital_krw = initial_capital * usdkrw
+    final_1x_krw = total_1x.iloc[-1] * usdkrw
+    final_2x_krw = total_2x.iloc[-1] * usdkrw
 
-        final_1x_krw = total_1x.iloc[-1] * usdkrw
-        final_2x_krw = total_2x.iloc[-1] * usdkrw
-
-        exchange_text = f"""
-        **기준 환율일:** {fx_ts.date()}  
-        **USD/KRW 환율:** {usdkrw:,.2f}원  
-        
-        **매수가 원화 환산:** {shareprices_krw:,.0f}원  
-        **투자금 원화 환산:** {initial_capital_krw:,.0f}원  
-        """
-
-    final_1x_krw_text = f"{final_1x_krw:,.0f}원"
-    final_2x_krw_text = f"{final_2x_krw:,.0f}원"
-    
-    # 1x 양도소득세
     profit_1x_krw = final_1x_krw - initial_capital_krw
     taxable_profit_1x = max(profit_1x_krw - 2_500_000, 0)
     capital_gains_tax_1x = taxable_profit_1x * 0.22
     after_tax_krw_1x = final_1x_krw - capital_gains_tax_1x
-    
-    # 2x 양도소득세
+
     profit_2x_krw = final_2x_krw - initial_capital_krw
     taxable_profit_2x = max(profit_2x_krw - 2_500_000, 0)
     capital_gains_tax_2x = taxable_profit_2x * 0.22
     after_tax_krw_2x = final_2x_krw - capital_gains_tax_2x
-    
-    capital_gains_tax_text_1x = f"{capital_gains_tax_1x:,.0f}원"
-    capital_gains_tax_text_2x = f"{capital_gains_tax_2x:,.0f}원"
-    
-    after_tax_krw_text_1x = f"{after_tax_krw_1x:,.0f}원"
-    after_tax_krw_text_2x = f"{after_tax_krw_2x:,.0f}원"
-    
+
     compare_diff = after_tax_krw_2x - after_tax_krw_1x
-    
+
     if compare_diff > 0:
         compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 이익"
     elif compare_diff < 0:
@@ -158,108 +129,94 @@ if st.button("결과보기"):
     else:
         compare_text = "기본형과 수익이 동일"
 
-    st.subheader("결과")
-
-    #구매일
     purchase_date_text = base_ts.strftime("%Y년 %m월 %d일")
     purchase_fx_text = f"{usdkrw:,.2f}원"
 
+    st.subheader("결과")
 
     st.markdown(f"""
-    ### 기본형(1x)
+    ### 기본형(1x) - {ticker_1x}
+    - 매수가: {shareprice_1x:,.2f} USD
     - 누적 수익률: {final_r_1x:.2%}
     - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
-    - {purchase_date_text} 기준 환율 : {purchase_fx_text}
-    - 최종 자산 원화 환산: {final_1x_krw_text}
-    - 양도소득세: {capital_gains_tax_text_1x}
-    - 양도소득세 공제 후 원화: {after_tax_krw_text_1x}
-    
-    ### 레버리지(2x)
+    - {purchase_date_text} 기준 환율: {purchase_fx_text}
+    - 최종 자산 원화 환산: {final_1x_krw:,.0f}원
+    - 양도소득세: {capital_gains_tax_1x:,.0f}원
+    - 양도소득세 공제 후 원화: {after_tax_krw_1x:,.0f}원
+
+    ### 레버리지 ETF - {ticker_2x}
+    - 기준일 가격: {shareprice_2x:,.2f} USD
     - 누적 수익률: {final_r_2x:.2%}
     - 최종 자산: {total_2x.iloc[-1]:,.2f} USD
-    - {purchase_date_text} 기준 환율 : {purchase_fx_text}
-    - 최종 자산 원화 환산: {final_2x_krw_text}
-    - 양도소득세: {capital_gains_tax_text_2x}
-    - 양도소득세 공제 후 원화: {after_tax_krw_text_2x}
+    - {purchase_date_text} 기준 환율: {purchase_fx_text}
+    - 최종 자산 원화 환산: {final_2x_krw:,.0f}원
+    - 양도소득세: {capital_gains_tax_2x:,.0f}원
+    - 양도소득세 공제 후 원화: {after_tax_krw_2x:,.0f}원
     - 기본형과 세금 공제 후 비교: {compare_text}
     """)
 
     st.info("""
-    양도소득세는 수익금에서 250만 원 기본공제를 뺀 뒤, 남은 과세 대상 수익에 22%를 적용해 계산  
-    (양도소득세) = (최종 자산 - 최초 투자금 - 250만 원) × 0.22(지방세)  
-    수익금이 250만 원 이하일 때는 공제 후 양도소득세 0원 처리
+    양도소득세는 수익금에서 250만 원 기본공제를 뺀 뒤, 남은 과세 대상 수익에 22%를 적용해 계산합니다.
     """)
 
     # ----------------------------
-    # 1. 기준일 이후 주가 그래프
+    # 1. 주가 그래프
     # ----------------------------
     st.subheader("1) 주가 그래프")
 
-    price_plot = close_ticker.loc[base_ts:]
+    price_1x_plot = close_1x.loc[base_ts:]
+    price_2x_plot = close_2x.loc[base_ts:]
 
-    if len(price_plot) < 2:
-        st.warning("기준일 이후 데이터가 1개 이하라서 선그래프가 거의 보이지 않을 수 있어요. 더 이전 날짜를 선택하면 그래프가 잘 보입니다.")
+    x = range(len(price_1x_plot))
 
-    x = range(len(price_plot))
-    
-    fig1, ax1 = plt.subplots(figsize=(10, 4))
-    
-    ax1.plot(
-        x,
-        price_plot.values,
-        marker="o",
-        label=f"{ticker} Price"
-    )
-    
-    ax1.set_xticks(x)
+    fig1, ax1 = plt.subplots(figsize=(12, 5))
+
+    ax1.plot(x, price_1x_plot.values, marker="o", label=f"{ticker_1x} Price")
+    ax1.plot(x, price_2x_plot.values, marker="o", label=f"{ticker_2x} Price")
+
+    ax1.set_xticks(list(x))
     ax1.set_xticklabels(
-        [d.strftime("%Y-%m-%d") for d in price_plot.index],
+        [d.strftime("%Y-%m-%d") for d in price_1x_plot.index],
         rotation=45
     )
-    
-    ax1.set_title(f"{ticker} Price from {base_ts.date()}")
+
+    ax1.set_title(f"{ticker_1x} vs {ticker_2x} Price from {base_ts.date()}")
     ax1.set_xlabel("Trading Date")
     ax1.set_ylabel("Price (USD)")
     ax1.legend()
+
     st.pyplot(fig1)
 
     # ----------------------------
-    # 2. 누적 수익률 그래프 + 매일 괴리율 점/텍스트 표시
+    # 2. 누적 수익률 그래프
     # ----------------------------
     st.subheader("2) 누적 수익률 그래프")
-    
-    # 누적 수익률(%)
+
     cum_r1 = (cum_from_base_1x.loc[base_ts:] - 1) * 100
     cum_r2 = (cum_from_base_2x.loc[base_ts:] - 1) * 100
-    
-    # 실제 2x 복리 결과
-    actual_2x = cum_from_base_2x.loc[base_ts:]
-    
-    # 단순 2배 기대값
+
     simple_2x = 1 + 2 * (cum_from_base_1x.loc[base_ts:] - 1)
-    
-    # 매일 괴리율(%)
+    simple_2x_return = (simple_2x - 1) * 100
+
+    actual_2x = cum_from_base_2x.loc[base_ts:]
     gap_rate = ((actual_2x - simple_2x) / simple_2x) * 100
-    
-    # 점 크기: 괴리율 절댓값이 클수록 크게
+
     gap_abs = gap_rate.abs()
     max_gap = gap_abs.max()
-    
+
     if max_gap == 0 or pd.isna(max_gap):
         point_size = pd.Series(80, index=gap_rate.index)
     else:
         point_size = 80 + 220 * (gap_abs / max_gap)
-    
-    # x축: 거래일만 간격 없이 표시
+
     x = range(len(cum_r1))
-    
+
     fig2, ax2 = plt.subplots(figsize=(12, 5))
-    
-    # 기본 선
-    ax2.plot(x, cum_r1.values, marker="o", label="1x cumulative return (%)")
-    ax2.plot(x, cum_r2.values, marker="o", label="2x cumulative return (%)")
-    
-    # 2x 선 위에 괴리율 점 표시
+
+    ax2.plot(x, cum_r1.values, marker="o", label=f"{ticker_1x} cumulative return (%)")
+    ax2.plot(x, simple_2x_return.values, linestyle="--", label="Simple 2x expectation (%)")
+    ax2.plot(x, cum_r2.values, marker="o", label=f"{ticker_2x} actual return (%)")
+
     ax2.scatter(
         x,
         cum_r2.values,
@@ -270,10 +227,9 @@ if st.button("결과보기"):
         edgecolors="black",
         linewidths=0.5,
         zorder=3,
-        label="Daily gap rate"
+        label="Gap rate"
     )
-    
-    # 점 위에 괴리율 텍스트 표시
+
     for xi, yi, gap in zip(x, cum_r2.values, gap_rate.values):
         ax2.annotate(
             f"{gap:+.2f}%",
@@ -281,66 +237,40 @@ if st.button("결과보기"):
             xytext=(0, 10),
             textcoords="offset points",
             ha="center",
-            fontsize=10,
+            fontsize=9,
             fontweight="bold"
         )
-    
+
     ax2.axhline(0, color="black", linewidth=0.8)
-    
+
     ax2.set_xticks(list(x))
     ax2.set_xticklabels(
         [d.strftime("%Y-%m-%d") for d in cum_r1.index],
         rotation=45
     )
-    
-    ax2.set_title(f"{ticker} Cumulative Return from {base_ts.date()}")
+
+    ax2.set_title(f"{ticker_1x} vs {ticker_2x} Cumulative Return from {base_ts.date()}")
     ax2.set_xlabel("Trading Date")
     ax2.set_ylabel("Return (%)")
     ax2.legend()
-    
+
     st.pyplot(fig2)
-    
-    st.info("""
-    점의 색깔과 크기는 매일 괴리율의 크기를 나타내고, 점 위 숫자는 해당 거래일의 괴리율(%)입니다.  
-    
-    괴리율이 0%에 가까우면 :  
-    실제 2x 복리 결과가 단순 2배 기대값과 거의 비슷합니다.  
-    
-    괴리율이 양수면 :  
-    → 실제 2x 복리 결과가 단순 2배 기대값보다 높습니다.  
-    → 상승장에서는 더 많이 오르고, 하락장에서는 덜 떨어집니다.  
-    
-    괴리율이 음수면 :  
-    → 실제 2x 복리 결과가 단순 2배 기대값보다 낮습니다.  
-    → 상승장에서는 덜 오르고, 하락장에서는 더 많이 떨어집니다.  
-    """)
 
     # ----------------------------
-    # 3. 총 자산 그래프 + 매일 괴리율 점/텍스트 표시
+    # 3. 총 자산 그래프
     # ----------------------------
     st.subheader("3) 총 자산 그래프")
-    
-    # x축: 거래일만 간격 없이 표시
+
+    expected_2x_value = simple_2x * initial_capital
+
     x = range(len(total_1x))
-    
+
     fig3, ax3 = plt.subplots(figsize=(12, 5))
-    
-    # 기본 총 자산 선
-    ax3.plot(
-        x,
-        total_1x.values,
-        marker="o",
-        label="1x portfolio value"
-    )
-    
-    ax3.plot(
-        x,
-        total_2x.values,
-        marker="o",
-        label="2x portfolio value"
-    )
-    
-    # 2x 총 자산 선 위에 괴리율 점 표시
+
+    ax3.plot(x, total_1x.values, marker="o", label=f"{ticker_1x} portfolio value")
+    ax3.plot(x, expected_2x_value.values, linestyle="--", label="Simple 2x expected value")
+    ax3.plot(x, total_2x.values, marker="o", label=f"{ticker_2x} actual portfolio value")
+
     ax3.scatter(
         x,
         total_2x.values,
@@ -351,10 +281,9 @@ if st.button("결과보기"):
         edgecolors="black",
         linewidths=0.5,
         zorder=3,
-        label="Daily gap rate"
+        label="Gap rate"
     )
-    
-    # 점 위에 괴리율 텍스트 표시
+
     for xi, yi, gap in zip(x, total_2x.values, gap_rate.values):
         ax3.annotate(
             f"{gap:+.2f}%",
@@ -362,35 +291,29 @@ if st.button("결과보기"):
             xytext=(0, 10),
             textcoords="offset points",
             ha="center",
-            fontsize=10,
+            fontsize=9,
             fontweight="bold"
         )
-    
+
     ax3.set_xticks(list(x))
     ax3.set_xticklabels(
         [d.strftime("%Y-%m-%d") for d in total_1x.index],
         rotation=45
     )
-    
-    ax3.set_title(f"{ticker} Portfolio Value from {base_ts.date()}")
+
+    ax3.set_title(f"{ticker_1x} vs {ticker_2x} Portfolio Value from {base_ts.date()}")
     ax3.set_xlabel("Trading Date")
     ax3.set_ylabel("Portfolio Value (USD)")
     ax3.legend()
-    
+
     st.pyplot(fig3)
 
     st.info("""
-    누적 수익률은 매일의 수익률이 복리로 누적된 최종 결과입니다.
-    
-    예를 들어:
-    첫날 +10% 상승 후
-    다음날 -5% 하락하면  
-    단순 계산으로는 +5% 같아 보이지만,
+    이 그래프는 세 가지를 비교합니다.
 
-    실제 자산은:
-    100 → 110 → 104.5
-    가 되므로 최종 누적 수익률은 +4.5%입니다.
-    
-    레버리지 ETF(2x) 역시 같은 방식으로 계산되며,
-    변동성이 클수록 단순 2배와 차이가 발생할 수 있습니다.
+    1. 기본형 1x 실제 자산
+    2. 1x 수익률을 단순히 2배 했을 때의 기대 자산
+    3. 실제 레버리지 ETF의 자산
+
+    괴리율은 실제 레버리지 ETF가 단순 2배 기대값보다 얼마나 높거나 낮은지를 보여줍니다.
     """)
