@@ -69,6 +69,10 @@ if st.button("결과보기"):
     close_1x = close_1x.loc[common_dates]
     close_2x = close_2x.loc[common_dates]
 
+    if len(common_dates) == 0:
+        st.error("두 티커의 공통 거래일 데이터가 없습니다.")
+        st.stop()
+
     if base_ts not in common_dates:
         available = common_dates[common_dates <= base_ts]
 
@@ -97,8 +101,8 @@ if st.button("결과보기"):
     initial_capital_1x = shares * shareprice_1x
     initial_capital_2x = shares * shareprice_2x
 
-    total_1x = (cum_from_base_1x * initial_capital).loc[base_ts:]
-    total_2x = (cum_from_base_2x * initial_capital).loc[base_ts:]
+    total_1x = (cum_from_base_1x * initial_capital_1x).loc[base_ts:]
+    total_2x = (cum_from_base_2x * initial_capital_2x).loc[base_ts:]
 
     usdkrw, fx_ts = get_usdkrw_rate(base_ts)
 
@@ -106,27 +110,30 @@ if st.button("결과보기"):
         st.warning("기준일 환율 데이터를 가져오지 못했어요.")
         st.stop()
 
-    initial_capital_krw = initial_capital * usdkrw
+    initial_capital_1x_krw = initial_capital_1x * usdkrw
+    initial_capital_2x_krw = initial_capital_2x * usdkrw
 
     final_1x_krw = total_1x.iloc[-1] * usdkrw
     final_2x_krw = total_2x.iloc[-1] * usdkrw
 
-    profit_1x_krw = final_1x_krw - initial_capital_krw
-    taxable_profit_1x = max(profit_1x_krw - 2_500_000, 0)
-    capital_gains_tax_1x = taxable_profit_1x * 0.22
-    after_tax_krw_1x = final_1x_krw - capital_gains_tax_1x
+    profit_1x_krw = final_1x_krw - initial_capital_1x_krw
+    profit_2x_krw = final_2x_krw - initial_capital_2x_krw
 
-    profit_2x_krw = final_2x_krw - initial_capital_krw
+    taxable_profit_1x = max(profit_1x_krw - 2_500_000, 0)
     taxable_profit_2x = max(profit_2x_krw - 2_500_000, 0)
+
+    capital_gains_tax_1x = taxable_profit_1x * 0.22
     capital_gains_tax_2x = taxable_profit_2x * 0.22
+
+    after_tax_krw_1x = final_1x_krw - capital_gains_tax_1x
     after_tax_krw_2x = final_2x_krw - capital_gains_tax_2x
 
     compare_diff = after_tax_krw_2x - after_tax_krw_1x
 
     if compare_diff > 0:
-        compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 이익"
+        compare_text = f"레버리지 ETF가 기본형보다 {abs(compare_diff):,.0f}원 이익"
     elif compare_diff < 0:
-        compare_text = f"기본형보다 {abs(compare_diff):,.0f}원 손해"
+        compare_text = f"레버리지 ETF가 기본형보다 {abs(compare_diff):,.0f}원 손해"
     else:
         compare_text = "기본형과 수익이 동일"
 
@@ -138,26 +145,40 @@ if st.button("결과보기"):
     st.markdown(f"""
     ### 기본형(1x) - {ticker_1x}
     - 매수가: {shareprice_1x:,.2f} USD
+    - 매수 수량: {shares:,}주
+    - 최초 투자금: {initial_capital_1x:,.2f} USD
+    - 최초 투자금 원화 환산: {initial_capital_1x_krw:,.0f}원
     - 누적 수익률: {final_r_1x:.2%}
     - 최종 자산: {total_1x.iloc[-1]:,.2f} USD
     - {purchase_date_text} 기준 환율: {purchase_fx_text}
     - 최종 자산 원화 환산: {final_1x_krw:,.0f}원
+    - 수익금: {profit_1x_krw:,.0f}원
     - 양도소득세: {capital_gains_tax_1x:,.0f}원
     - 양도소득세 공제 후 원화: {after_tax_krw_1x:,.0f}원
 
     ### 레버리지 ETF - {ticker_2x}
-    - 기준일 가격: {shareprice_2x:,.2f} USD
+    - 매수가: {shareprice_2x:,.2f} USD
+    - 매수 수량: {shares:,}주
+    - 최초 투자금: {initial_capital_2x:,.2f} USD
+    - 최초 투자금 원화 환산: {initial_capital_2x_krw:,.0f}원
     - 누적 수익률: {final_r_2x:.2%}
     - 최종 자산: {total_2x.iloc[-1]:,.2f} USD
     - {purchase_date_text} 기준 환율: {purchase_fx_text}
     - 최종 자산 원화 환산: {final_2x_krw:,.0f}원
+    - 수익금: {profit_2x_krw:,.0f}원
     - 양도소득세: {capital_gains_tax_2x:,.0f}원
     - 양도소득세 공제 후 원화: {after_tax_krw_2x:,.0f}원
-    - 기본형과 세금 공제 후 비교: {compare_text}
+    - 세금 공제 후 비교: {compare_text}
     """)
 
     st.info("""
-    양도소득세는 수익금에서 250만 원 기본공제를 뺀 뒤, 남은 과세 대상 수익에 22%를 적용해 계산합니다.
+    양도소득세는 투자금 전체가 아니라 수익금에 대해 계산합니다.
+
+    계산식:
+    과세 대상 수익 = max(수익금 - 2,500,000원, 0)
+    양도소득세 = 과세 대상 수익 × 22%
+
+    따라서 300주를 사도 수익금이 250만 원 이하이면 양도소득세는 0원입니다.
     """)
 
     # ----------------------------
@@ -257,28 +278,12 @@ if st.button("결과보기"):
 
     st.pyplot(fig2)
 
-    st.info("""
-    점의 색깔과 크기는 매일 괴리율의 크기를 나타내고, 점 위 숫자는 해당 거래일의 괴리율(%)입니다.  
-    
-    괴리율이 0%에 가까우면 :  
-    실제 2x 복리 결과가 단순 2배 기대값과 거의 비슷합니다.  
-    
-    괴리율이 양수면 :  
-    → 실제 2x 복리 결과가 단순 2배 기대값보다 높습니다.  
-    → 상승장에서는 더 많이 오르고, 하락장에서는 덜 떨어집니다.  
-    
-    괴리율이 음수면 :  
-    → 실제 2x 복리 결과가 단순 2배 기대값보다 낮습니다.  
-    → 상승장에서는 덜 오르고, 하락장에서는 더 많이 떨어집니다.  
-    """)
-
-
     # ----------------------------
     # 3. 총 자산 그래프
     # ----------------------------
     st.subheader("3) 총 자산 그래프")
 
-    expected_2x_value = simple_2x * initial_capital
+    expected_2x_value = simple_2x * initial_capital_1x
 
     x = range(len(total_1x))
 
@@ -324,19 +329,3 @@ if st.button("결과보기"):
     ax3.legend()
 
     st.pyplot(fig3)
-
-    st.info("""
-    누적 수익률은 매일의 수익률이 복리로 누적된 최종 결과입니다.
-    
-    예를 들어:
-    첫날 +10% 상승 후
-    다음날 -5% 하락하면  
-    단순 계산으로는 +5% 같아 보이지만,
-
-    실제 자산은:
-    100 → 110 → 104.5
-    가 되므로 최종 누적 수익률은 +4.5%입니다.
-    
-    레버리지 ETF(2x) 역시 같은 방식으로 계산되며,
-    변동성이 클수록 단순 2배와 차이가 발생할 수 있습니다.
-    """)
