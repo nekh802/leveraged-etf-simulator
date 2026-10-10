@@ -12,6 +12,10 @@ scipy>=1.11
 # plotting
 matplotlib>=3.8
 seaborn>=0.13
+plotly>=5.20
+
+# web app
+streamlit>=1.37
 
 # notebooks
 jupyter>=1.0

@@ -1,3 +1,17 @@
+import os
+import shutil
+
+import certifi
+
+# 프로젝트 경로에 한글이 포함되어 있으면 curl_cffi(libcurl)가 인증서 파일을
+# 못 읽는 경우가 있어서, ASCII 경로로 복사한 뒤 환경변수로 지정해준다.
+_ascii_cacert = os.path.join(os.path.expanduser("~"), ".cache", "certifi", "cacert.pem")
+os.makedirs(os.path.dirname(_ascii_cacert), exist_ok=True)
+if not os.path.exists(_ascii_cacert):
+    shutil.copyfile(certifi.where(), _ascii_cacert)
+os.environ.setdefault("CURL_CA_BUNDLE", _ascii_cacert)
+os.environ.setdefault("SSL_CERT_FILE", _ascii_cacert)
+
 import yfinance as yf
 import pandas as pd
 
