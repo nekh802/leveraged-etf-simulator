@@ -12,6 +12,20 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown(
+    """
+<style>
+.scroll-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scroll-table table { min-width: 480px; }
+@media (max-width: 640px) {
+  .scroll-table table { font-size: 0.8em; }
+  .scroll-table td, .scroll-table th { padding: 6px 8px !important; }
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
 COLOR_1X = "#4C72B0"
 COLOR_2X = "#DD8452"
 COLOR_EXPECTED = "#999999"
@@ -216,7 +230,7 @@ metric_rows = [
     ("양도소득세", capital_gains_tax_1x, capital_gains_tax_2x, "₩", False),
 ]
 
-cell_style = "padding:9px 12px; border:1px solid #ddd; word-break:break-word; line-height:1.4;"
+cell_style = "padding:9px 12px; border:1px solid #ddd; white-space:nowrap;"
 col_style_1x = cell_style + ("background-color:#e8f5e9;" if winner_row == row_1x else "")
 col_style_2x = cell_style + ("background-color:#e8f5e9;" if winner_row == row_2x else "")
 col_style_diff = cell_style + "background-color:#f5f5f5;"
@@ -227,7 +241,7 @@ for label, v1, v2, unit, pct in metric_rows:
     if pct:
         c1 = f"<span style='color:{sign_color(v1)}; font-weight:600;'>{v1:+.2%}</span>"
         c2 = f"<span style='color:{sign_color(v2)}; font-weight:600;'>{v2:+.2%}</span>"
-        cdiff = f"<span style='color:{sign_color(diff)}; font-weight:700;'>{diff:+.2%}</span>"
+        cdiff = f"<span style='color:{sign_color(diff)}; font-weight:700;'>{diff * 100:+.2f}%p</span>"
     else:
         c1 = f"{unit}{v1:,.0f}"
         c2 = f"{unit}{v2:,.0f}"
@@ -241,7 +255,8 @@ for label, v1, v2, unit, pct in metric_rows:
 
 st.markdown(
     f"""
-<table style="width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; font-size:0.95em;">
+<div class="scroll-table">
+<table style="width:100%; min-width:680px; table-layout:fixed; border-collapse:collapse; font-size:0.95em;">
 <colgroup>
 <col style="width:18%;"><col style="width:24%;"><col style="width:24%;"><col style="width:34%;">
 </colgroup>
@@ -253,6 +268,7 @@ st.markdown(
 </tr>
 {metric_rows_html}
 </table>
+</div>
 """,
     unsafe_allow_html=True,
 )
@@ -303,7 +319,7 @@ with st.expander("투자금 · 세금 계산 방식 자세히 보기"):
         ("수익금(세전 원화, 조회일 기준)", f"₩{profit_1x_krw:,.0f}", f"₩{profit_2x_krw:,.0f}"),
     ]
     detail_label_style = "padding:10px 14px; border:1px solid #ddd; white-space:nowrap;"
-    detail_val_style = "padding:10px 14px; border:1px solid #ddd;"
+    detail_val_style = "padding:10px 14px; border:1px solid #ddd; white-space:nowrap;"
     rows_html = "".join(
         f"<tr><td style='{detail_label_style}'>{label}</td>"
         f"<td style='{detail_val_style}'>{v1}</td>"
@@ -312,7 +328,8 @@ with st.expander("투자금 · 세금 계산 방식 자세히 보기"):
     )
     st.markdown(
         f"""
-<table style="width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; font-size:0.9em;">
+<div class="scroll-table">
+<table style="width:100%; min-width:560px; table-layout:fixed; border-collapse:collapse; font-size:0.9em;">
 <colgroup>
 <col style="width:46%;"><col style="width:27%;"><col style="width:27%;">
 </colgroup>
@@ -323,6 +340,7 @@ with st.expander("투자금 · 세금 계산 방식 자세히 보기"):
 </tr>
 {rows_html}
 </table>
+</div>
 """,
         unsafe_allow_html=True,
     )
